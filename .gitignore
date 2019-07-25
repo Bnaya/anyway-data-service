@@ -1,0 +1,11 @@
+.idea/
+.vscode/
+node_modules/
+build/
+tmp/
+temp/
+.env
+firebase-debug.log
+# src/**/*.js
+src/**/*.js.map
+yarn-error.log
