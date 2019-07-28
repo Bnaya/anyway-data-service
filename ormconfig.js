@@ -1,39 +1,56 @@
-const RUNNING_IN_CLI =
-  process.argv[1].endsWith("node_modules/.bin/typeorm") ||
-  process.argv[1].endsWith(".ts");
-
 // @ts-check
-// const path = require("path");
-// eslint-disable-next-line @typescript-eslint/no-use-before-define
-const params = validateConnectionEnvParams();
+/* eslint-disable @typescript-eslint/no-var-requires */
+const {
+  ConnectionOptionsReader
+} = require("typeorm/connection/ConnectionOptionsReader");
 
-/**
- * @type {import("typeorm").ConnectionOptions}
- */
-const ormConfig = {
-  type: "postgres",
-  host: params.host,
-  port: params.port,
-  username: params.user,
-  password: params.password,
-  database: params.database,
-  schema: params.schema,
-  synchronize: false,
-  logging: RUNNING_IN_CLI ? true : false,
-  entities: RUNNING_IN_CLI ? ["src/entity/**/*.ts"] : ["build/entity/**/*.js"],
-  migrations: RUNNING_IN_CLI
-    ? ["src/migration/**/*.ts"]
-    : ["build/migration/**/*.js"],
-  subscribers: RUNNING_IN_CLI
-    ? ["src/subscriber/**/*.ts"]
-    : ["build/subscriber/**/*.js"],
-  cli: {
-    entitiesDir: "src/entity",
-    migrationsDir: "src/migration",
-    subscribersDir: "src/subscriber"
-  }
-};
-module.exports = ormConfig;
+patchAsyncConnectionSetup();
+
+const RUNNING_IN_CLI =
+  (process.argv[1] || "").endsWith("node_modules/.bin/typeorm") ||
+  (process.argv[1] || "").endsWith(".ts");
+
+async function createOrmConfig() {
+  // const path = require("path");
+
+  const params = validateConnectionEnvParams();
+
+  /**
+   * @type {import("typeorm").ConnectionOptions}
+   */
+  const ormConfig = {
+    type: "postgres",
+    host: params.host,
+    port: params.port,
+    username: params.user,
+    // @ts-ignore
+    password: await decrypt(params.password),
+    database: params.database,
+    schema: params.schema,
+    synchronize: false,
+    logging: RUNNING_IN_CLI ? true : false,
+    entities: RUNNING_IN_CLI
+      ? ["src/entity/**/*.ts"]
+      : ["build/entity/**/*.js"],
+    migrations: RUNNING_IN_CLI
+      ? ["src/migration/**/*.ts"]
+      : ["build/migration/**/*.js"],
+    subscribers: RUNNING_IN_CLI
+      ? ["src/subscriber/**/*.ts"]
+      : ["build/subscriber/**/*.js"],
+    cli: {
+      entitiesDir: "src/entity",
+      migrationsDir: "src/migration",
+      subscribersDir: "src/subscriber"
+    }
+  };
+
+  // console.log(JSON.stringify(ormConfig, null, 2));
+
+  return ormConfig;
+}
+
+module.exports = createOrmConfig;
 
 function validateConnectionEnvParams() {
   if (!process.env.POSTGRES_HOST) {
@@ -72,3 +89,55 @@ function validateConnectionEnvParams() {
     schema: process.env.POSTGRES_SCHEMA
   };
 }
+
+function patchAsyncConnectionSetup() {
+  const prototype = ConnectionOptionsReader.prototype;
+
+  // @ts-ignore
+  const original = prototype.normalizeConnectionOptions;
+
+  // @ts-ignore
+  prototype.normalizeConnectionOptions = function(options) {
+    let actualOptions = options;
+
+    if (typeof options === "function") {
+      // @ts-ignore
+      actualOptions = options();
+    }
+
+    if ("then" in actualOptions) {
+      // @ts-ignore
+      return actualOptions.then(arg => original.call(this, arg));
+    }
+
+    return original.call(this, actualOptions);
+  };
+}
+
+// @ts-ignore
+async function decrypt(ciphertext) {
+  // @ts-ignore
+  const kms = require("@google-cloud/kms");
+  const client = new kms.KeyManagementServiceClient();
+
+  const projectId = "anyway-hasadna";
+  const keyRingId = "anyway-hasadna-data-service";
+  const cryptoKeyId = "forenvvars";
+  const locationId = "europe-west2";
+
+  const fullKeyName = client.cryptoKeyPath(
+    projectId,
+    locationId,
+    keyRingId,
+    cryptoKeyId
+  );
+
+  // Decrypts the file using the specified crypto key
+  const [result] = await client.decrypt({ name: fullKeyName, ciphertext });
+
+  // console.log(ciphertext, result.plaintext.toString());
+
+  return result.plaintext.toString();
+}
+
+module.exports.decrypt = decrypt;
