@@ -1,0 +1,42 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "debug.node.autoAttach": "on",
+  "search.exclude": {
+    "**/bower_components": true,
+    "**/node_modules": true,
+    "node_modules/**": true,
+    "build": true
+    // "src/**/*.js": true,
+    // "src/**/*.js.map": true
+  },
+  // "files.exclude": {
+  //   "**/.git": true,
+  //   "**/.svn": true,
+  //   "**/.hg": true,
+  //   "**/CVS": true,
+  //   "src/**/*.js": false,
+  //   "src/**/*.js.map": true
+  // },
+  "cSpell.words": ["ormconfig", "pubsub"],
+  "eslint.autoFixOnSave": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    { "language": "typescript", "autoFix": true },
+    { "language": "typescriptreact", "autoFix": true }
+  ],
+  "editor.formatOnSave": true,
+  "[javascript]": {
+    "editor.formatOnSave": false
+  },
+  "[javascriptreact]": {
+    "editor.formatOnSave": false
+  },
+  "[typescript]": {
+    "editor.formatOnSave": false
+  },
+  "[typescriptreact]": {
+    "editor.formatOnSave": false
+  },
+  "python.formatting.provider": "black"
+}
