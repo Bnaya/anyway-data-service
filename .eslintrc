@@ -15,6 +15,7 @@
     "@typescript-eslint/no-use-before-define": [
       "error",
       { "variables": true, "classes": true, "functions": false }
-    ]
+    ],
+    "no-shadow": 2
   }
 }
