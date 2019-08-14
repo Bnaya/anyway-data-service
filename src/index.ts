@@ -2,8 +2,12 @@ import "tslib";
 // ATM needed for firebase on server
 import "dotenv/config";
 import { createConnection } from "typeorm";
-import functions = require("firebase-functions");
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 import { wazeAlertsDownloaderImpl } from "./functionsImpl/wazeAlertsDownloader";
+import { wazeTGeoRSSDumperImpl } from "./functionsImpl/wazeTGeoRSSDumper";
+
+admin.initializeApp();
 
 export const helloWorld = functions
   .region("europe-west2")
@@ -24,5 +28,9 @@ export const helloWorld = functions
 
 export const wazeAlertsDownloader = functions
   .region("europe-west2")
-  .pubsub.schedule("every 4 minutes")
+  .pubsub.schedule("every 5 minutes")
   .onRun(wazeAlertsDownloaderImpl);
+
+export const wazeTGeoRSSDumper = functions.pubsub
+  .schedule("every 5 minutes")
+  .onRun(wazeTGeoRSSDumperImpl);
