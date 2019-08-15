@@ -10,37 +10,41 @@ const alertsURL =
 export async function wazeAlertsDownloaderImpl() {
   const connection = await createConnection();
 
-  const dataSourceResponse = await phin({
-    url: alertsURL,
-    parse: "json"
-  });
+  try {
+    const dataSourceResponse = await phin({
+      url: alertsURL,
+      parse: "json"
+    });
 
-  await connection.transaction(async transaction => {
-    const jamsRepo = transaction.getRepository(WazeJams);
-    const alertsRepo = transaction.getRepository(WazeAlerts);
-    const irregularitiesRepo = transaction.getRepository(WazeIrregularities);
+    await connection.transaction(async transaction => {
+      const jamsRepo = transaction.getRepository(WazeJams);
+      const alertsRepo = transaction.getRepository(WazeAlerts);
+      const irregularitiesRepo = transaction.getRepository(WazeIrregularities);
 
-    const { jamsToInsert } = await handleJams(jamsRepo, dataSourceResponse);
-    const { alertsToInsert, alertsToUpdateReliability } = await handleAlerts(
-      alertsRepo,
-      dataSourceResponse
-    );
+      const { jamsToInsert } = await handleJams(jamsRepo, dataSourceResponse);
+      const { alertsToInsert, alertsToUpdateReliability } = await handleAlerts(
+        alertsRepo,
+        dataSourceResponse
+      );
 
-    const { irregularitiesToInsert } = await handleIrregularities(
-      irregularitiesRepo,
-      dataSourceResponse
-    );
+      const { irregularitiesToInsert } = await handleIrregularities(
+        irregularitiesRepo,
+        dataSourceResponse
+      );
 
-    // console.log(irregularitiesToInsert.length);
+      // console.log(irregularitiesToInsert.length);
 
-    console.log(
-      `Waze update done: Alerts: ${alertsToInsert.length}.` +
-        ` Jams: ${jamsToInsert.length}. Irregularities: ${irregularitiesToInsert.length}.` +
-        ` Updated Alerts: ${alertsToUpdateReliability.length}`
-    );
-  });
-
-  await connection.close();
+      console.log(
+        `Waze update done: Alerts: ${alertsToInsert.length}.` +
+          ` Jams: ${jamsToInsert.length}. Irregularities: ${irregularitiesToInsert.length}.` +
+          ` Updated Alerts: ${alertsToUpdateReliability.length}`
+      );
+    });
+  } catch (e) {
+    console.error(e);
+  } finally {
+    await connection.close();
+  }
 }
 
 async function handleJams(
@@ -141,6 +145,12 @@ async function handleIrregularities(
   irregularitiesRepo: Repository<WazeIrregularities>,
   dataSourceResponse: any
 ) {
+  if (!dataSourceResponse.body.irregularities) {
+    return {
+      irregularitiesToInsert: []
+    };
+  }
+
   const oldIrregularities = await irregularitiesRepo.find({
     where: {
       id: In(dataSourceResponse.body.irregularities.map((ir: any) => ir.id))
@@ -150,7 +160,7 @@ async function handleIrregularities(
   const irregularitiesToInsert = dataSourceResponse.body.irregularities
     .filter((newIr: any) => {
       return !oldIrregularities.some(oldIr => {
-        return oldIr.id === newIr.id;
+        return oldIr.id.toString() === newIr.id.toString();
       });
     })
     .map(

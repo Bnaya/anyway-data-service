@@ -31,6 +31,7 @@ export const wazeAlertsDownloader = functions
   .pubsub.schedule("every 5 minutes")
   .onRun(wazeAlertsDownloaderImpl);
 
-export const wazeTGeoRSSDumper = functions.pubsub
-  .schedule("every 5 minutes")
+export const wazeTGeoRSSDumper = functions
+  .region("europe-west2")
+  .pubsub.schedule("every 5 minutes")
   .onRun(wazeTGeoRSSDumperImpl);
